@@ -42,6 +42,22 @@ test("Pam's tab: scheduled runs are counted; a question and its answer stay toge
   assert.equal(v.days[1].threads[0].latest, undefined, 'a one-message conversation has no reply line');
 });
 
+test('conversations with no readable time sit together at the bottom, never above real days', () => {
+  const m = (id, created_at) => msg({ id, from: 'dwight', act: 'request', subject: id, created_at });
+  const v = messageView([m('a', at(10)), m('b', 'n/a'), m('c', at(10, 24)), m('d', '')]);
+  assert.deepEqual(v.days.map((d) => d.day), [localDay(at(10)), localDay(at(10, 24)), ''], 'one undated section, last');
+  assert.deepEqual(v.days[2].threads.map((t) => t.conversation), ['b', 'd']);
+});
+
+test('the Messages tab names an undated section in every language instead of formatting a bad date', () => {
+  const src = read('src/renderer/src/components/ThreadsPanel.tsx');
+  assert.match(src, /if \(!day\) return t\('threads\.undated'\)/);
+  for (const lang of ['en', 'zh-CN', 'ar']) {
+    const strings = JSON.parse(read(`src/renderer/src/i18n/locales/${lang}.json`));
+    assert.ok(strings.threads.undated, `${lang} has threads.undated`);
+  }
+});
+
 test('routine, verbs and the quoted gist', () => {
   assert.equal(isRoutine({ from: 'pam', subject: 'CLOSING-TIME-ACK' }), true);
   assert.equal(isRoutine({ from: 'dwight', subject: 'Deal' }), false);

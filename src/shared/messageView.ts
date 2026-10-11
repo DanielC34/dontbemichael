@@ -70,7 +70,14 @@ export function messageView<M extends HistoryItem>(msgs: M[]): MessageView<M> {
     const sorted = [...list].sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
     const last = sorted[sorted.length - 1];
     return { conversation, first: sorted[0], ...(sorted.length > 1 ? { latest: last } : {}), messages: sorted, lastAt: last.created_at };
-  }).sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
+  }).sort((a, b) => {
+    // A conversation with no readable time goes last, together, instead of
+    // wherever its text happens to sort ("n/a" sorts after any year).
+    const aUndated = localDay(a.lastAt) === '';
+    const bUndated = localDay(b.lastAt) === '';
+    if (aUndated || bUndated) return aUndated === bUndated ? 0 : aUndated ? 1 : -1;
+    return a.lastAt < b.lastAt ? 1 : -1;
+  });
 
   const days: MessageView<M>['days'] = [];
   for (const t of threads) {
